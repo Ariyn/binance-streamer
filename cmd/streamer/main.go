@@ -2,6 +2,7 @@ package main
 
 import (
 	"binance-api/pkg/binancews"
+	"binance-api/pkg/config"
 	"binance-api/pkg/pipeline"
 	"binance-api/pkg/sink"
 	"flag"
@@ -12,28 +13,34 @@ import (
 )
 
 func main() {
-	sinkType := flag.String("sink", "console", "Type of sink: console, file, http")
-	filePath := flag.String("out", "output.json", "Output file path (if sink=file)")
-	httpURL := flag.String("url", "http://localhost:8080", "HTTP endpoint URL (if sink=http)")
-	httpMethod := flag.String("method", "POST", "HTTP method (if sink=http)")
-	httpContentType := flag.String("content-type", "application/json", "HTTP Content-Type (if sink=http)")
+	configPath := flag.String("config", "config.yaml", "Path to configuration file")
 	flag.Parse()
 
-	var dataSink sink.Sink
-	var err error
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatalf("Failed to load config: %v", err)
+	}
 
-	switch *sinkType {
+	var dataSink sink.Sink
+
+	switch cfg.Sink.Type {
 	case "console":
 		dataSink = sink.NewConsoleSink()
 	case "file":
-		dataSink, err = sink.NewFileSink(*filePath)
+		if cfg.Sink.File == nil {
+			log.Fatal("File sink configuration missing")
+		}
+		dataSink, err = sink.NewFileSink(cfg.Sink.File.Path)
 		if err != nil {
 			log.Fatalf("Failed to create file sink: %v", err)
 		}
 	case "http":
-		dataSink = sink.NewHttpSink(*httpURL, *httpMethod, *httpContentType)
+		if cfg.Sink.Http == nil {
+			log.Fatal("HTTP sink configuration missing")
+		}
+		dataSink = sink.NewHttpSink(cfg.Sink.Http.URL, cfg.Sink.Http.Method, cfg.Sink.Http.ContentType)
 	default:
-		log.Fatalf("Unknown sink type: %s", *sinkType)
+		log.Fatalf("Unknown sink type: %s", cfg.Sink.Type)
 	}
 	defer dataSink.Close()
 
@@ -44,14 +51,12 @@ func main() {
 	}
 	defer client.Close()
 
-	// Subscribe to btcusdt@aggTrade
-	streams := []string{"btcusdt@aggTrade", "btcusdt@depth"}
-	if err := client.Subscribe(streams, 1); err != nil {
+	if err := client.Subscribe(cfg.Streams, 1); err != nil {
 		log.Fatalf("Failed to subscribe: %v", err)
 	}
 
-	fmt.Println("Subscribed to", streams)
-	fmt.Printf("Using sink: %s\n", *sinkType)
+	fmt.Println("Subscribed to", cfg.Streams)
+	fmt.Printf("Using sink: %s\n", cfg.Sink.Type)
 
 	// Handle interrupt signal to gracefully shutdown
 	interrupt := make(chan os.Signal, 1)
