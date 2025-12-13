@@ -2,6 +2,9 @@ package main
 
 import (
 	"binance-api/pkg/binancews"
+	"binance-api/pkg/pipeline"
+	"binance-api/pkg/sink"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +12,26 @@ import (
 )
 
 func main() {
+	sinkType := flag.String("sink", "console", "Type of sink: console, file")
+	filePath := flag.String("out", "output.json", "Output file path (if sink=file)")
+	flag.Parse()
+
+	var dataSink sink.Sink
+	var err error
+
+	switch *sinkType {
+	case "console":
+		dataSink = sink.NewConsoleSink()
+	case "file":
+		dataSink, err = sink.NewFileSink(*filePath)
+		if err != nil {
+			log.Fatalf("Failed to create file sink: %v", err)
+		}
+	default:
+		log.Fatalf("Unknown sink type: %s", *sinkType)
+	}
+	defer dataSink.Close()
+
 	client := binancews.NewClient()
 
 	if err := client.Connect(); err != nil {
@@ -23,21 +46,14 @@ func main() {
 	}
 
 	fmt.Println("Subscribed to", streams)
+	fmt.Printf("Using sink: %s\n", *sinkType)
 
 	// Handle interrupt signal to gracefully shutdown
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
 	go func() {
-		for {
-			select {
-			case msg := <-client.Messages():
-				fmt.Printf("Received: %s\n", msg)
-			case err := <-client.Errors():
-				log.Printf("Error: %v", err)
-				return
-			}
-		}
+		pipeline.Run(client.Messages(), client.Errors(), dataSink)
 	}()
 
 	<-interrupt
