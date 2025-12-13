@@ -12,8 +12,11 @@ import (
 )
 
 func main() {
-	sinkType := flag.String("sink", "console", "Type of sink: console, file")
+	sinkType := flag.String("sink", "console", "Type of sink: console, file, http")
 	filePath := flag.String("out", "output.json", "Output file path (if sink=file)")
+	httpURL := flag.String("url", "http://localhost:8080", "HTTP endpoint URL (if sink=http)")
+	httpMethod := flag.String("method", "POST", "HTTP method (if sink=http)")
+	httpContentType := flag.String("content-type", "application/json", "HTTP Content-Type (if sink=http)")
 	flag.Parse()
 
 	var dataSink sink.Sink
@@ -27,6 +30,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to create file sink: %v", err)
 		}
+	case "http":
+		dataSink = sink.NewHttpSink(*httpURL, *httpMethod, *httpContentType)
 	default:
 		log.Fatalf("Unknown sink type: %s", *sinkType)
 	}
