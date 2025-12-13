@@ -21,27 +21,31 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	var dataSink sink.Sink
-
-	switch cfg.Sink.Type {
-	case "console":
-		dataSink = sink.NewConsoleSink()
-	case "file":
-		if cfg.Sink.File == nil {
-			log.Fatal("File sink configuration missing")
+	var sinks []sink.Sink
+	for _, sCfg := range cfg.Sinks {
+		switch sCfg.Type {
+		case "console":
+			sinks = append(sinks, sink.NewConsoleSink())
+		case "file":
+			if sCfg.File == nil {
+				log.Fatal("File sink configuration missing")
+			}
+			fs, err := sink.NewFileSink(sCfg.File.Path)
+			if err != nil {
+				log.Fatalf("Failed to create file sink: %v", err)
+			}
+			sinks = append(sinks, fs)
+		case "http":
+			if sCfg.Http == nil {
+				log.Fatal("HTTP sink configuration missing")
+			}
+			sinks = append(sinks, sink.NewHttpSink(sCfg.Http.URL, sCfg.Http.Method, sCfg.Http.ContentType))
+		default:
+			log.Fatalf("Unknown sink type: %s", sCfg.Type)
 		}
-		dataSink, err = sink.NewFileSink(cfg.Sink.File.Path)
-		if err != nil {
-			log.Fatalf("Failed to create file sink: %v", err)
-		}
-	case "http":
-		if cfg.Sink.Http == nil {
-			log.Fatal("HTTP sink configuration missing")
-		}
-		dataSink = sink.NewHttpSink(cfg.Sink.Http.URL, cfg.Sink.Http.Method, cfg.Sink.Http.ContentType)
-	default:
-		log.Fatalf("Unknown sink type: %s", cfg.Sink.Type)
 	}
+
+	dataSink := sink.NewMultiSink(sinks)
 	defer dataSink.Close()
 
 	client := binancews.NewClient()
@@ -56,7 +60,7 @@ func main() {
 	}
 
 	fmt.Println("Subscribed to", cfg.Streams)
-	fmt.Printf("Using sink: %s\n", cfg.Sink.Type)
+	fmt.Printf("Using %d sinks\n", len(sinks))
 
 	// Handle interrupt signal to gracefully shutdown
 	interrupt := make(chan os.Signal, 1)

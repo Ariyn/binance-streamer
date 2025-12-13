@@ -1,11 +1,13 @@
 streams:
   - btcusdt@aggTrade
   - btcusdt@depth
-sink:
-  type: console
-  file:
-    path: output.json
-  http:
-    url: http://localhost:8080
-    method: POST
-    content_type: application/json
+sinks:
+  - type: console
+  - type: file
+    file:
+      path: output.json
+  - type: http
+    http:
+      url: http://localhost:8080
+      method: POST
+      content_type: application/json

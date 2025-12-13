@@ -7,8 +7,8 @@ import (
 )
 
 type Config struct {
-	Streams []string   `yaml:"streams"`
-	Sink    SinkConfig `yaml:"sink"`
+	Streams []string     `yaml:"streams"`
+	Sinks   []SinkConfig `yaml:"sinks"`
 }
 
 type SinkConfig struct {
