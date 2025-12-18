@@ -2,6 +2,7 @@ package binancews
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -47,12 +48,13 @@ func (c *Client) Connect() error {
 	c.conn = conn
 
 	// Set initial read deadline
-	c.conn.SetReadDeadline(time.Now().Add(ReadTimeout))
+	conn.SetReadDeadline(time.Now().Add(ReadTimeout))
 
 	// Set Ping Handler to respond to server Pings and extend deadline
-	c.conn.SetPingHandler(func(appData string) error {
-		c.conn.SetReadDeadline(time.Now().Add(ReadTimeout))
-		return c.conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
+	conn.SetPingHandler(func(appData string) error {
+		log.Println("Received ping, extending deadline")
+		conn.SetReadDeadline(time.Now().Add(ReadTimeout))
+		return conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
 	})
 
 	go c.readLoop()
