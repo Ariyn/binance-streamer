@@ -8,7 +8,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const BaseURL = "wss://stream.binance.com:9443/ws"
+const (
+	BaseURL     = "wss://stream.binance.com:9443/ws"
+	ReadTimeout = 5 * time.Minute
+)
 
 // Client represents a Binance WebSocket client
 type Client struct {
@@ -43,8 +46,12 @@ func (c *Client) Connect() error {
 	}
 	c.conn = conn
 
-	// Set Ping Handler to respond to server Pings
+	// Set initial read deadline
+	c.conn.SetReadDeadline(time.Now().Add(ReadTimeout))
+
+	// Set Ping Handler to respond to server Pings and extend deadline
 	c.conn.SetPingHandler(func(appData string) error {
+		c.conn.SetReadDeadline(time.Now().Add(ReadTimeout))
 		return c.conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
 	})
 
@@ -112,6 +119,7 @@ func (c *Client) readLoop() {
 					return
 				}
 			}
+			c.conn.SetReadDeadline(time.Now().Add(ReadTimeout))
 			select {
 			case c.read <- message:
 			case <-c.done:
