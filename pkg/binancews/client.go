@@ -93,6 +93,7 @@ func (c *Client) readLoop() {
 		if c.conn != nil {
 			c.conn.Close()
 		}
+		close(c.read)
 	}()
 
 	for {
@@ -111,7 +112,11 @@ func (c *Client) readLoop() {
 					return
 				}
 			}
-			c.read <- message
+			select {
+			case c.read <- message:
+			case <-c.done:
+				return
+			}
 		}
 	}
 }
