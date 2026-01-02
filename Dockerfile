@@ -18,4 +18,6 @@ WORKDIR /app
 COPY --from=builder /app/streamer .
 COPY config.yaml .
 
+EXPOSE 8081
+
 CMD ["./streamer"]
