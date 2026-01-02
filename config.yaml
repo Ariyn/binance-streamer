@@ -1,6 +1,10 @@
 streams:
   - btcusdt@aggTrade
   - btcusdt@depth
+
+health:
+  addr: ":8081"
+
 sinks:
   - type: console
   - type: file

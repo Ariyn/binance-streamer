@@ -7,8 +7,13 @@ import (
 )
 
 type Config struct {
-	Streams []string     `yaml:"streams"`
-	Sinks   []SinkConfig `yaml:"sinks"`
+	Streams []string      `yaml:"streams"`
+	Sinks   []SinkConfig  `yaml:"sinks"`
+	Health  *HealthConfig `yaml:"health,omitempty"`
+}
+
+type HealthConfig struct {
+	Addr string `yaml:"addr"`
 }
 
 type SinkConfig struct {

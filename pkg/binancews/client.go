@@ -111,6 +111,11 @@ func (c *Client) getConn() *websocket.Conn {
 	return c.conn
 }
 
+// IsConnected reports whether the client currently has an active websocket connection.
+func (c *Client) IsConnected() bool {
+	return c.getConn() != nil
+}
+
 func (c *Client) clearConnIfSame(conn *websocket.Conn) {
 	c.mu.Lock()
 	if c.conn == conn {
